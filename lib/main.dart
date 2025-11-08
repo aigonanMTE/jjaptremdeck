@@ -1,7 +1,6 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:project/setting/setting.dart';
 
 void main() {
   runApp(const MyApp());
@@ -9,6 +8,12 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
+  void buttonPressed(int rowIndex, int colIndex) {
+    HapticFeedback.vibrate(); // 미세한 진동
+    debugPrint("Button ($rowIndex, $colIndex) pressed");
+    // 서버로 전송
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,10 +29,10 @@ class MyApp extends StatelessWidget {
               children: List.generate(
                 7,
                     (colIndex) => Material(
-                  color: Colors.transparent, // InkWell을 위한 Material 래퍼
+                  color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(10.0), // 물결효과 모양
-                    onTap: buttonPressed(rowIndex , colIndex),
+                    borderRadius: BorderRadius.circular(10.0),
+                    onTap: () => buttonPressed(rowIndex, colIndex), // ✅ 수정됨
                     child: Container(
                       width: 120,
                       height: 120,
@@ -42,24 +47,21 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-
-        // ✅ 오른쪽 아래에 설정 버튼 추가
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            debugPrint("Settings button pressed");
-          },
-          backgroundColor: Colors.grey[850],
-          mini: true, // 작게 만들기
-          child: const Icon(Icons.settings, color: Colors.white),
+        floatingActionButton: Builder(
+          builder: (context) {
+            return FloatingActionButton(
+              onPressed: () {
+                debugPrint("Settings button pressed");
+                showSettingDialog(context);
+              },
+              backgroundColor: Colors.grey[850],
+              mini: true,
+              child: const Icon(Icons.settings, color: Colors.white),
+            );
+          }
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.startTop, // 오른쪽 아래
+        floatingActionButtonLocation: FloatingActionButtonLocation.startTop,
       ),
     );
   }
-}
-
-buttonPressed(rowIndex , colIndex){
-  HapticFeedback.vibrate(); //미세한 진동
-  debugPrint("Button ($rowIndex, $colIndex) pressed");
-  // 서버로 전송
 }
