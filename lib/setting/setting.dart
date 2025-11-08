@@ -1,4 +1,9 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 void showSettingDialog(BuildContext context) {
   showDialog(
@@ -34,8 +39,8 @@ void showSettingDialog(BuildContext context) {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         "설정",
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -44,16 +49,32 @@ void showSettingDialog(BuildContext context) {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-                      // LabeledTextField 사용
+                      // ✅ 첫 번째 LabeledTextFieldRow: 숫자만 입력 허용
                       LabeledTextFieldRow(
+                        id: "buttonSize",
                         label: "버튼 크기",
                         hint: '기본값 : 120',
-                      ),
-                      SizedBox(height: 20),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly, // ✅ 숫자만 허용
+                        ],
+                        onChanged: (id, value) async {
+                          print(id);
 
-                      Text(
+                          // 문자열을 정수로 안전하게 변환
+                          final intValue = int.tryParse(value) ?? 20;
+
+                          final storage = await SharedPreferences.getInstance();
+                          await storage.setInt(id, intValue);
+
+                          print("저장된 값: ${storage.getInt(id)}");
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      const Text(
                         "추가 설정 항목을 여기에 배치할 수 있습니다.",
                         style: TextStyle(color: Colors.white70),
                       ),
@@ -69,27 +90,34 @@ void showSettingDialog(BuildContext context) {
   );
 }
 
+typedef ValueChangedWithId = void Function(String id, String value);
+
 class LabeledTextFieldRow extends StatelessWidget {
+  final String id; // 고유 ID
   final String label;
   final String hint;
   final TextEditingController? controller;
   final bool obscureText;
   final double labelWidth;
-  final ValueChanged<String>? onChanged; // 입력값 변경 콜백
+  final ValueChangedWithId? onChanged; // id와 값 전달
+  final List<TextInputFormatter>? inputFormatters; // ✅ 추가됨
 
   const LabeledTextFieldRow({
     super.key,
+    required this.id,
     required this.label,
     required this.hint,
     this.controller,
     this.obscureText = false,
     this.labelWidth = 100,
     this.onChanged,
+    this.inputFormatters, // ✅ 선택적 포맷터
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(
           width: labelWidth,
@@ -103,6 +131,7 @@ class LabeledTextFieldRow extends StatelessWidget {
           child: TextField(
             controller: controller,
             obscureText: obscureText,
+            inputFormatters: inputFormatters, // ✅ 적용
             decoration: InputDecoration(
               filled: true,
               fillColor: const Color(0xFF3B4048),
@@ -114,7 +143,11 @@ class LabeledTextFieldRow extends StatelessWidget {
               hintStyle: const TextStyle(color: Colors.white54),
             ),
             style: const TextStyle(color: Colors.white),
-            onChanged: onChanged, // ✅ 입력 변경시 호출
+            onChanged: (value) {
+              if (onChanged != null) {
+                onChanged!(id, value); // ✅ ID와 함께 값 전달
+              }
+            },
           ),
         ),
       ],
