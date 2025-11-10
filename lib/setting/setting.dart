@@ -1,16 +1,27 @@
 import 'dart:ffi';
 
+//TODO : 진동 켜고 끄는 기능 만들기
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-void showSettingDialog(BuildContext context) {
+void showSettingDialog(BuildContext context, onSettingChanged) {
   showDialog(
     context: context,
     barrierDismissible: true,
     builder: (BuildContext context) {
       final screenWidth = MediaQuery.of(context).size.width;
+      final screenHeight = MediaQuery.of(context).size.height;
+
+      // ✅ 화면에 맞춘 최대 버튼 크기
+      // 가로 7개, 세로 4개 기준
+      final maxWidthButtonSize = (screenWidth / 7) - 10; // 버튼 사이 간격 고려
+      final maxHeightButtonSize = (screenHeight / 4) - 10; // 세로 간격
+      final dynamicMaxSize = maxWidthButtonSize < maxHeightButtonSize
+          ? maxWidthButtonSize
+          : maxHeightButtonSize;
 
       return Dialog(
         backgroundColor: const Color(0xFF282C34),
@@ -22,7 +33,6 @@ void showSettingDialog(BuildContext context) {
           padding: const EdgeInsets.all(20),
           child: Stack(
             children: [
-              // 닫기 버튼
               Positioned(
                 top: 0,
                 right: 0,
@@ -31,8 +41,6 @@ void showSettingDialog(BuildContext context) {
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
-
-              // 팝업 내용
               Padding(
                 padding: const EdgeInsets.only(top: 40),
                 child: SingleChildScrollView(
@@ -51,31 +59,41 @@ void showSettingDialog(BuildContext context) {
                       ),
                       const SizedBox(height: 20),
 
-                      // ✅ 첫 번째 LabeledTextFieldRow: 숫자만 입력 허용
+                      // ✅ 화면 크기에 맞춘 최대값 적용
                       LabeledTextFieldRow(
                         id: "buttonSize",
                         label: "버튼 크기",
-                        hint: '기본값 : 120',
+                        hint: '기본값: 120',
                         inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly, // ✅ 숫자만 허용
+                          FilteringTextInputFormatter.digitsOnly,
                         ],
                         onChanged: (id, value) async {
-                          print(id);
+                          final intValue = int.tryParse(value) ?? 120;
 
-                          // 문자열을 정수로 안전하게 변환
-                          final intValue = int.tryParse(value) ?? 20;
+                          // 최소값 50, 최대값 화면 기준
+                          final safeValue = intValue.clamp(50, dynamicMaxSize.toInt());
 
                           final storage = await SharedPreferences.getInstance();
-                          await storage.setInt(id, intValue);
+                          await storage.setInt(id, safeValue);
 
-                          print("저장된 값: ${storage.getInt(id)}");
+                          // if (intValue != safeValue+1) {
+                          //   ScaffoldMessenger.of(context).showSnackBar(
+                          //     SnackBar(
+                          //       content: Text(
+                          //         "버튼 크기는 50~${dynamicMaxSize.toInt()} 사이로만 설정 가능합니다. ($safeValue으로 조정됨)",
+                          //       ),
+                          //       duration: const Duration(seconds: 2),
+                          //     ),
+                          //   );
+                          // }
+
+                          onSettingChanged();
                         },
                       ),
 
                       const SizedBox(height: 20),
-
                       const Text(
-                        "추가 설정 항목을 여기에 배치할 수 있습니다.",
+                        "변경사항은 설정창을 닫을 때 적용됩니다.",
                         style: TextStyle(color: Colors.white70),
                       ),
                     ],
